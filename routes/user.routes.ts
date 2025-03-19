@@ -1,9 +1,11 @@
 import {
   createUser,
+  deleteUser,
   getUser,
   loginUser,
   logoutUser,
   updateAvatar,
+  updateUser,
 } from "@/controllers/users.controller";
 import { connectDB } from "@/db";
 import { verifyJwt } from "@/helpers/verifyJwt";
@@ -20,5 +22,7 @@ user.post("/login-user", loginUser);
 user.get("/logout-user", verifyJwt, logoutUser);
 user.get("/get-user", verifyJwt, getUser);
 user.patch("/update-avatar", verifyJwt, updateAvatar);
+user.patch("/update-user", verifyJwt, updateUser);
+user.delete("/delete-user", verifyJwt, deleteUser);
 
 export default user;

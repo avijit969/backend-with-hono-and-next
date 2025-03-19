@@ -6,47 +6,52 @@ import { uploadOnCloudinary } from "@/utils/cloudinary";
 import { Context } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 const createUser = async (c: Context) => {
-  const { username, email, password } = await c.req.json();
-  if (!username || !email || !password) {
-    return c.json(
-      {
-        message: "All fields are required",
-        status: 400,
-      },
-      400
-    );
-  }
-  const existingUser = await User.findOne({
-    $or: [{ username }, { email }],
-  });
-  if (existingUser) {
-    return c.json(
-      {
-        message: "User already exists with the same username or email",
-        status: 400,
-        success: false,
-      },
-      400
-    );
-  }
-  //  hash password
-  const hashedPassword = await hashPassword(password);
+  try {
+    const { username, email, password, fullname } = await c.req.json();
+    if (!username || !email || !password || !fullname) {
+      return c.json(
+        {
+          message: "All fields are required",
+          status: 400,
+        },
+        400
+      );
+    }
+    const existingUser = await User.findOne({
+      $or: [{ username }, { email }],
+    });
+    if (existingUser) {
+      return c.json(
+        {
+          message: "User already exists with the same username or email",
+          status: 400,
+          success: false,
+        },
+        400
+      );
+    }
+    //  hash password
+    const hashedPassword = await hashPassword(password);
 
-  const user = await User.create({
-    username,
-    email,
-    password: hashedPassword,
-  });
-  const createdUser = await User.findById(user._id).select("-password");
-  return c.json(
-    {
-      message: "User created successfully",
-      data: createdUser,
-      status: 201,
-      success: true,
-    },
-    201
-  );
+    const user = await User.create({
+      username,
+      email,
+      password: hashedPassword,
+      fullname,
+    });
+    const createdUser = await User.findById(user._id).select("-password");
+    return c.json(
+      {
+        message: "User created successfully",
+        data: createdUser,
+        status: 201,
+        success: true,
+      },
+      201
+    );
+  } catch (error: any) {
+    return c.json({ message: error.message, status: 500 }, 500);
+  }
 };
 
 const loginUser = async (c: Context) => {
@@ -95,7 +100,7 @@ const loginUser = async (c: Context) => {
       username: user.username,
       email: user.email,
       id: user._id,
-      fullanme: user.fullanme,
+      fullname: user.fullname,
       avatar: user.avatar,
       accessToken: accessToken,
     },
@@ -165,4 +170,91 @@ const updateAvatar = async (c: Context) => {
   }
 };
 
-export { createUser, loginUser, getUser, logoutUser, updateAvatar };
+const updateUser = async (c: Context) => {
+  try {
+    const { _id } = c.get("user");
+    console.log(_id);
+    const body = await c.req.parseBody();
+    const { fullname, username, email } = body;
+    const userFounded = await User.findById(_id);
+    if (!userFounded) {
+      return c.json({ message: "User not found", status: 404 }, 404);
+    }
+    if (!fullname && !username && !email) {
+      return c.json({ message: "No fields to update", status: 400 }, 400);
+    }
+    const usernameAndEmailAlreadyExists = await User.findOne({
+      $or: [{ username: username }, { email: email }],
+    });
+    if (usernameAndEmailAlreadyExists) {
+      return c.json(
+        {
+          message: "Username already exists try with another one",
+          status: 400,
+        },
+        400
+      );
+    }
+    let imageUrl = userFounded.avatar;
+    if (body.avatar) {
+      imageUrl = await uploadOnCloudinary(body.avatar as File);
+      if (!imageUrl) {
+        return c.json({ message: "Upload failed", status: 500 }, 500);
+      }
+    }
+    const updatedUser = await User.findByIdAndUpdate(
+      _id,
+      {
+        $set: {
+          fullname: fullname || userFounded.fullname,
+          username: username || userFounded.username,
+          email: email || userFounded.email,
+          avatar: imageUrl.secure_url,
+        },
+      },
+      { new: true }
+    );
+
+    return c.json(
+      {
+        message: "User updated successfully",
+        data: updatedUser,
+        status: 200,
+        sucess: true,
+      },
+      200
+    );
+  } catch (error: any) {
+    return c.json({ message: error.message, status: 500 }, 500);
+  }
+};
+const deleteUser = async (c: Context) => {
+  try {
+    const { _id } = c.get("user");
+    const userFounded = await User.findById(_id);
+    if (!userFounded) {
+      return c.json({ message: "User not found", status: 404 }, 404);
+    }
+    const deletedUser = await User.findByIdAndDelete(_id);
+    return c.json(
+      {
+        message: "User deleted successfully",
+        data: deletedUser,
+        status: 200,
+        sucess: true,
+      },
+      200
+    );
+  } catch (error: any) {
+    return c.json({ message: error.message, status: 500 }, 500);
+  }
+};
+export {
+  createUser,
+  loginUser,
+  getUser,
+  logoutUser,
+  updateAvatar,
+  updateUser,
+  deleteUser,
+};
