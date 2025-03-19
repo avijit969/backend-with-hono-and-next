@@ -1,7 +1,7 @@
 import { generateAccessToken } from "@/helpers/generateTokents";
 import hashPassword from "@/helpers/hashPassword";
 import { isPasswordCorrect } from "@/helpers/verifyHashPassword";
-import { User } from "@/models/model.users";
+import { User } from "@/models/user.model";
 import { uploadOnCloudinary } from "@/utils/cloudinary";
 import { Context } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
