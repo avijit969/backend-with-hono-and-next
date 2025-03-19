@@ -9,18 +9,9 @@ const tripSchema = new Schema(
     },
     description: {
       type: String,
-      required: true,
     },
     image: {
       type: String,
-      required: true,
-    },
-    startDate: {
-      type: Date,
-      required: true,
-    },
-    endDate: {
-      type: Date,
       required: true,
     },
     location: {
@@ -29,7 +20,7 @@ const tripSchema = new Schema(
     },
     members: [
       {
-        userId: {
+        user: {
           type: Schema.Types.ObjectId,
           ref: "User",
         },
@@ -40,6 +31,10 @@ const tripSchema = new Schema(
         },
       },
     ],
+    creator: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
   },
   {
     timestamps: true,
