@@ -2,25 +2,32 @@ import { generateAccessToken } from "@/helpers/generateTokents";
 import hashPassword from "@/helpers/hashPassword";
 import { isPasswordCorrect } from "@/helpers/verifyHashPassword";
 import { User } from "@/models/model.users";
+import { uploadOnCloudinary } from "@/utils/cloudinary";
 import { Context } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 const createUser = async (c: Context) => {
   const { username, email, password } = await c.req.json();
   if (!username || !email || !password) {
-    return c.json({
-      message: "All fields are required",
-      status: 400,
-    });
+    return c.json(
+      {
+        message: "All fields are required",
+        status: 400,
+      },
+      400
+    );
   }
   const existingUser = await User.findOne({
     $or: [{ username }, { email }],
   });
   if (existingUser) {
-    return c.json({
-      message: "User already exists with the same username or email",
-      status: 400,
-      success: false,
-    });
+    return c.json(
+      {
+        message: "User already exists with the same username or email",
+        status: 400,
+        success: false,
+      },
+      400
+    );
   }
   //  hash password
   const hashedPassword = await hashPassword(password);
@@ -31,36 +38,48 @@ const createUser = async (c: Context) => {
     password: hashedPassword,
   });
   const createdUser = await User.findById(user._id).select("-password");
-  return c.json({
-    message: "User created successfully",
-    data: createdUser,
-    status: 201,
-    success: true,
-  });
+  return c.json(
+    {
+      message: "User created successfully",
+      data: createdUser,
+      status: 201,
+      success: true,
+    },
+    201
+  );
 };
 
 const loginUser = async (c: Context) => {
   const { username, password } = await c.req.json();
   console.log(username, password);
   if (!username || !password) {
-    return c.json({
-      message: "All fields are required",
-      status: 400,
-    });
+    return c.json(
+      {
+        message: "All fields are required",
+        status: 400,
+      },
+      400
+    );
   }
   const user = await User.findOne({ username });
   if (!user) {
-    return c.json({
-      message: "User not found",
-      status: 404,
-    });
+    return c.json(
+      {
+        message: "User not found",
+        status: 404,
+      },
+      404
+    );
   }
   const isPasswordRight = await isPasswordCorrect(password, user.password);
   if (!isPasswordRight) {
-    return c.json({
-      message: "Invalid credentials",
-      status: 401,
-    });
+    return c.json(
+      {
+        message: "Invalid credentials",
+        status: 400,
+      },
+      400
+    );
   }
   //   generate access token
   const accessToken = await generateAccessToken(user);
@@ -103,5 +122,47 @@ const getUser = async (c: Context) => {
     success: true,
   });
 };
+const updateAvatar = async (c: Context) => {
+  try {
+    const { _id } = c.get("user");
+    const body = await c.req.parseBody();
+    const file = body.avatar as File;
 
-export { createUser, loginUser, getUser, logoutUser };
+    if (!file) {
+      return c.json({ message: "No file uploaded", status: 400 });
+    }
+
+    // Upload to Cloudinary
+    const imageUrl = await uploadOnCloudinary(file);
+
+    if (!imageUrl) {
+      return c.json({ message: "Upload failed", status: 500 });
+    }
+
+    // Update user avatar in the database
+    const updatedUser = await User.findByIdAndUpdate(
+      _id,
+      {
+        $set: {
+          avatar: imageUrl.secure_url,
+        },
+      },
+      { new: true }
+    ).select("-password -refreshToken");
+
+    return c.json(
+      {
+        message: "Avatar updated successfully",
+        data: updatedUser,
+        status: 200,
+        sucess: true,
+      },
+      200
+    );
+  } catch (error) {
+    console.error(error);
+    return c.json({ message: "Server error", status: 500 }, 500);
+  }
+};
+
+export { createUser, loginUser, getUser, logoutUser, updateAvatar };

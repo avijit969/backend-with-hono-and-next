@@ -3,6 +3,7 @@ import {
   getUser,
   loginUser,
   logoutUser,
+  updateAvatar,
 } from "@/controllers/users.controller";
 import { connectDB } from "@/db";
 import { verifyJwt } from "@/helpers/verifyJwt";
@@ -18,5 +19,6 @@ user.post("/create-user", createUser);
 user.post("/login-user", loginUser);
 user.get("/logout-user", verifyJwt, logoutUser);
 user.get("/get-user", verifyJwt, getUser);
+user.patch("/update-avatar", verifyJwt, updateAvatar);
 
 export default user;
