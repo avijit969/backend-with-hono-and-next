@@ -1,5 +1,11 @@
-import { createUser, loginUser } from "@/controllers/users.controller";
+import {
+  createUser,
+  getUser,
+  loginUser,
+  logoutUser,
+} from "@/controllers/users.controller";
 import { connectDB } from "@/db";
+import { verifyJwt } from "@/helpers/verifyJwt";
 import { Hono } from "hono";
 const user = new Hono();
 connectDB();
@@ -10,9 +16,7 @@ user.get("/", (c) => {
 });
 user.post("/create-user", createUser);
 user.post("/login-user", loginUser);
-user.get("/get-user", (c) => {
-  console.log(c.get("jwtPayload"));
-  return c.json(c.get("jwtPayload"));
-});
+user.get("/logout-user", verifyJwt, logoutUser);
+user.get("/get-user", verifyJwt, getUser);
 
 export default user;

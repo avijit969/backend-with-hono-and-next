@@ -4,17 +4,12 @@ import userRoute from "@/routes/user.routes";
 import { connectDB } from "@/db";
 import { jwt } from "hono/jwt";
 import type { JwtVariables } from "hono/jwt";
+import { verifyJwt } from "@/helpers/verifyJwt";
 type Variables = JwtVariables;
 
 const app = new Hono<{ Variables: Variables }>().basePath("/api");
 
 app.route("/user", userRoute);
-app.use("/user/*", (c, next) => {
-  const jwtMiddleware = jwt({
-    secret: process.env.ACCESS_TOKEN_SECRET as string,
-  });
-  return jwtMiddleware(c, next);
-});
 export const GET = handle(app);
 export const POST = handle(app);
 export const DELETE = handle(app);

@@ -3,7 +3,7 @@ import hashPassword from "@/helpers/hashPassword";
 import { isPasswordCorrect } from "@/helpers/verifyHashPassword";
 import { User } from "@/models/model.users";
 import { Context } from "hono";
-import { setCookie } from "hono/cookie";
+import { deleteCookie, setCookie } from "hono/cookie";
 const createUser = async (c: Context) => {
   const { username, email, password } = await c.req.json();
   if (!username || !email || !password) {
@@ -84,4 +84,24 @@ const loginUser = async (c: Context) => {
   });
 };
 
-export { createUser, loginUser };
+const logoutUser = async (c: Context) => {
+  deleteCookie(c, "accessToken");
+  return c.json({
+    message: "user Logout successful",
+    status: 200,
+  });
+};
+const getUser = async (c: Context) => {
+  const { _id } = c.get("user");
+  const user = await User.findById(_id).select("-password");
+  if (!user)
+    return c.json({ message: "User not found", status: 404, success: false });
+  return c.json({
+    message: "User found successfully",
+    data: user,
+    status: 200,
+    success: true,
+  });
+};
+
+export { createUser, loginUser, getUser, logoutUser };
