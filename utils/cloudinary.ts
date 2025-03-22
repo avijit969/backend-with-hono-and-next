@@ -12,19 +12,25 @@ const uploadOnCloudinary = async (file: File) => {
     if (!file) return null;
 
     // Convert the File object to a buffer
-    const buffer = await file.arrayBuffer();
-    const tempFilePath = `./${file.name}`;
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
 
-    // Write buffer to a temporary file
-    await fs.writeFile(tempFilePath, new Uint8Array(buffer));
-    // Upload file from the temp path
-    const response = await cloudinary.uploader.upload(tempFilePath, {
-      resource_type: "auto",
-      folder: "hono-backend",
-    });
-
-    // Delete the temp file
-    await fs.unlink(tempFilePath);
+    const response = await new Promise<any>((resolve, reject) =>
+      cloudinary.uploader
+        .upload_stream(
+          {
+            folder: "budegtracker",
+          },
+          (error, result) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(result);
+            }
+          }
+        )
+        .end(buffer)
+    );
 
     return response;
   } catch (error) {
